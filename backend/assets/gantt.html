@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <link href="/assets/style.css" rel="stylesheet" />
+</head>
+<body>
+
+<svg id="gantt"></svg>
+<script src="/assets/moment.min.js" charset="utf-8"></script>
+<script src="/assets/snap.svg-min.js" charset="utf-8"></script>
+<script src="/assets/frappe-gantt.min.js" charset="utf-8"></script>
+<script type="text/javascript" charset="utf-8">
+    /*
+    console.log("Loading data");
+    $.ajax({
+        url: '/workcenters',
+        method: 'GET',
+        dataType: 'json',
+        data: {},  //probably you have some parameters
+        success: displaygraph,
+        error: function() {alert('error getting data');}
+    });
+    */
+
+    let orders = [
+            {
+                "order_id":"1263681",
+                "operation":"50",
+                "prev_operation":null,
+                "workcenter":"9714",
+                "prev_workcenter":null,
+                "start_time":"2017-07-04",
+                "end_time":"2017-07-04",
+                "setup_time":1800,
+                "processing_time":9000,
+                "plan_setup_time":1800,
+                "plan_processing_time":9000
+            },
+            {
+                "order_id":"1263681",
+                "operation":"110",
+                "prev_operation":50,
+                "workcenter":"9714",
+                "prev_workcenter":"9714",
+                "start_time":"2017-07-17",
+                "end_time":"2017-07-24",
+                "setup_time":1800,
+                "processing_time":18000,
+                "plan_setup_time":1800,
+                "plan_processing_time":18000
+            },{
+                "order_id":"1263681",
+                "operation":"115",
+                "prev_operation":110,
+                "workcenter":"9714",
+                "prev_workcenter":"9714","start_time":"2017-07-24","end_time":"2017-07-24","setup_time":3600,"processing_time":3600,"plan_setup_time":3600,"plan_processing_time":3600}
+                ];
+
+    let gantOrders = [];
+    let prev = null;
+    for (let i = 0; i < orders.length; i++) {
+        let o = orders[i];
+        let j = i;
+        let name = "Task-" + o.order_id;
+        gantOrders.push({id: name,
+            name: 'GANTT order (' + o.order_id + ') - ' + o.operation,
+            start: o.start_time,
+            end: o.end_time,
+            progress: o.processing_time / o.setup_time,
+            dependencies: prev});
+        prev = name;
+    }
+    var tasks = [
+        {
+            id: 'Task 1',
+            name: 'Redesign website',
+            start: '2016-12-28',
+            end: '2016-12-31',
+            progress: 20,
+            dependencies: 'Task 2, Task 3'
+        },
+        {
+            id: 'Task 2',
+            name: 'Redesign websiteaaaa',
+            start: '2016-12-30',
+            end: '2017-01-08',
+            progress: 90,
+            dependencies: 'Task 6'
+        },
+        {
+            id: 'Task 4',
+            name: 'Redesign weaaaabsite',
+            start: '2017-01-01',
+            end: '2017-01-07',
+            progress: 0,
+            dependencies: 'Task 2, Task 3'
+        }
+    ];
+    console.log("Starting gantt", gantOrders);
+    var gantt = new Gantt('#gantt', tasks, {
+        // can be a function that returns html
+        // or a simple html string
+        custom_popup_html: function(task) {
+            // the task object will contain the updated
+            // dates and progress value
+            const end_date = task._end.format('MMM D');
+            return `
+        <div class="details-container">
+          <h5>${task.name}</h5>
+          <p>Expected to finish by ${end_date}</p>
+          <p>${task.progress}% completed!</p>
+        </div>
+      `;
+        }
+    });
+    console.log("done", gantt);
+</script>
+</body>
+</html>

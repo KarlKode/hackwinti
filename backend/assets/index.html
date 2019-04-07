@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <link href="/assets/style.css" rel="stylesheet" />
+</head>
+<body>
+
+<div id="cy"></div>
+<script src="//code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/cytoscape/3.5.2/cytoscape.min.js" charset="utf-8"></script>
+<script src="https://unpkg.com/weaverjs@1.2.0/dist/weaver.min.js"></script>
+<script src="//unpkg.com/dagre@0.7.4/dist/dagre.js"></script>
+<script src="/assets/cytoscape-spread.js"></script>
+<script src="/assets/cytoscape-dagre.js"></script>
+
+<script type="text/javascript" charset="utf-8">
+    let displaygraph = function(data) {
+        console.log("Called with", data);
+        let nodeWorkcenters = {};
+        let nodes = $(data.workcenters).map(function(_, d) {
+            let wcData = {
+                id: d.workcenter,
+                description: d.description,
+                label: 'outline',
+                classes: 'outline',
+                size: 50, foo: 2, bar: 3, baz: 10
+            };
+            nodeWorkcenters[d.workcenter] = wcData;
+            return {data: wcData};
+        });
+        let roots = $(data.sequences).filter(function(_, d) {
+            return d.workcenter_start !== "" && d.workcenter_end !== "";
+        }).map(function(_, d) {
+            return d.workcenter_start;
+        });
+        let edges = $(data.sequences).filter(function (_, d) {
+            return d.workcenter_start in nodeWorkcenters && d.workcenter_end in nodeWorkcenters;
+        }).map(function(_, d) {
+            nodeWorkcenters[d.workcenter_start]['size'] = 50 + 25 * Math.log2(d.count);
+            return {
+                data: {
+                    id: d.workcenter_start + d.workcenter_end,
+                    weight: 2 + 3 * Math.max(1, Math.log10(d.count)),
+                    opacity: Math.min(0.2 + Math.log10(d.count) / 3.1, 1),
+                    source: d.workcenter_start,
+                    target: d.workcenter_end
+                }
+            }
+        });
+        let countMin = 10000,
+            countMax = 0,
+        countLog = 0;
+        $(data.sequences).map(function (_, d) {
+            countMin = Math.min(countMin, 0.1 + Math.log10(d.count) / 10);
+            countMax = Math.max(countMax, 0.1 + Math.log10(d.count) / 10);
+            countLog = Math.max(countLog, 3 + 3 * Math.max(1, Math.log10(d.count)));
+            countOpacity = Math.min(0.1 + Math.log10(d.count) / 3, 1);
+        });
+        console.log("min, max, log", countMin, countMax, countLog, nodeWorkcenters);
+        cytoscape({
+            container: document.getElementById('cy'),
+            style: cytoscape.stylesheet()
+                .selector('node')
+                .css({
+                    'width': 'data(size)',
+                    'height': 'data(size)',
+                    'content': 'data(description)',
+                    'pie-size': '80%',
+                    'pie-1-background-color': '#E8747C',
+                    'pie-1-background-size': 'mapData(foo, 0, 10, 0, 100)',
+                    'pie-2-background-color': '#74CBE8',
+                    'pie-2-background-size': 'mapData(bar, 0, 10, 0, 100)',
+                    'pie-3-background-color': '#74E883',
+                    'pie-3-background-size': 'mapData(baz, 0, 10, 0, 100)'
+                })
+                .selector('edge')
+                .css({
+                    'curve-style': 'bezier',
+                    'width': 'data(weight)',
+                    'target-arrow-shape': 'triangle',
+                    'opacity': 'data(opacity)',
+                })
+                .selector(':selected')
+                .css({
+                    'background-color': 'black',
+                    'line-color': 'black',
+                    'target-arrow-color': 'black',
+                    'source-arrow-color': 'black',
+                    'opacity': 1
+                })
+                .selector('.faded')
+                .css({
+                    'opacity': 0.25,
+                    'text-opacity': 0
+                }),
+
+            elements: {
+                nodes: nodes.toArray(),
+                edges: edges.toArray()
+            },
+
+            /*
+            layout: {
+                name: 'circle',
+                padding: 10
+            },
+            layout: {
+                name: 'grid'
+            },
+            layout: {
+                name: 'dagre'
+            },
+            layout: {
+                name: 'spread',
+                minDist: 40
+            },
+            layout: {
+                name: 'cose',
+                idealEdgeLength: 100,
+                nodeOverlap: 20,
+                refresh: 20,
+                fit: true,
+                padding: 30,
+                randomize: false,
+                componentSpacing: 100,
+                nodeRepulsion: 400000,
+                edgeElasticity: 100,
+                nestingFactor: 5,
+                gravity: 80,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0
+            },
+            */
+            layout: {
+                /*
+                name: 'dagre',
+                rankDir: "RL",
+                fit: true,
+                directed: true,
+                padding: 10,
+                spacingFactor: 1.5,
+                avoidOverlap: true,
+                nodeDimensionsIncludeLabels: true,
+                roots: roots,
+                maximal: true,
+                */
+                animate: false, // whether to show the layout as it's running
+                refresh: 1, // number of ticks per frame; higher is faster but more jerky
+                maxSimulationTime: 4000, // max length in ms to run the layout
+                ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
+                fit: false, // on every layout reposition of nodes, fit the viewport
+                padding: 30, // padding around the simulation
+                boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+                nodeDimensionsIncludeLabels: false, // whether labels should be included in determining the space used by a node
+
+                // layout event callbacks
+                ready: function(){}, // on layoutready
+                stop: function(){}, // on layoutstop
+
+                // positioning options
+                randomize: false, // use random node positions at beginning of layout
+                avoidOverlap: true, // if true, prevents overlap of node bounding boxes
+                handleDisconnected: true, // if true, avoids disconnected components from overlapping
+                convergenceThreshold: 0.01, // when the alpha value (system energy) falls below this value, the layout stops
+                nodeSpacing: function( node ){ return 30; }, // extra spacing around nodes
+                flow: { axis: 'y', minSeparation: 30 }, // use DAG/tree flow layout if specified, e.g. { axis: 'y', minSeparation: 30 }
+                alignment: function( node ){ return { x: 0, y: 1 } }, // relative alignment constraints on nodes, e.g. function( node ){ return { x: 0, y: 1 } }
+                gapInequalities: undefined, // list of inequality constraints for the gap between the nodes, e.g. [{"axis":"y", "left":node1, "right":node2, "gap":25}]
+
+                // different methods of specifying edge length
+                // each can be a constant numerical value or a function like `function( edge ){ return 2; }`
+                edgeLength: undefined, // sets edge length directly in simulation
+                edgeSymDiffLength: undefined, // symmetric diff edge length in simulation
+                edgeJaccardLength: undefined, // jaccard edge length in simulation
+
+                // iterations of cola algorithm; uses default values on undefined
+                unconstrIter: undefined, // unconstrained initial layout iterations
+                userConstIter: undefined, // initial layout iterations with user-specified constraints
+                allConstIter: undefined, // initial layout iterations with all constraints including non-overlap
+
+                // infinite layout options
+                infinite: false, // overrides all other options for a forces-all-the-t
+                grid: false
+                /*
+
+                fit: true, // whether to fit the viewport to the graph
+                directed: true, // whether the tree is directed downwards (or edges can point in any direction if false)
+                padding: 30, // padding on fit
+                circle: false, // put depths in concentric circles if true, put depths top down if false
+                grid: false, // whether to create an even grid into which the DAG is placed (circle:false only)
+                spacingFactor: 1.75, // positive spacing factor, larger => more space between nodes (N.B. n/a if causes overlap)
+                boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+                avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
+                nodeDimensionsIncludeLabels: false, // Excludes the label when calculating node bounding boxes for the layout algorithm
+                roots: roots, // the roots of the trees
+                maximal: false, // whether to shift nodes down their natural BFS depths in order to avoid upwards edges (DAGS only)
+                animate: false, // whether to transition the node positions
+                animationDuration: 500, // duration of animation in ms if enabled
+                animationEasing: undefined, // easing of animation if enabled,
+                animateFilter: function ( node, i ){ return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
+                ready: undefined, // callback on layoutready
+                stop: undefined, // callback on layoutstop
+                transform: function (node, position ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts
+                */
+            },
+
+            minZoom: 0.2,
+            maxZoom: 1.5,
+            zoomingEnabled: true,
+            userZoomingEnabled: true,
+            panningEnabled: true,
+            userPanningEnabled: true,
+            boxSelectionEnabled: false,
+            selectionType: 'single',
+            touchTapThreshold: 8,
+            desktopTapThreshold: 4,
+            autolock: false,
+            autoungrabify: false,
+            autounselectify: false,
+
+            ready: function(){
+                window.cy = this;
+                this.zoom(0.4);
+            }
+        })
+    };
+
+    console.log("Loading data");
+    $.ajax({
+        url: '/workcenters',
+        method: 'GET',
+        dataType: 'json',
+        data: {},  //probably you have some parameters
+        success: displaygraph,
+        error: function() {alert('error getting data');}
+    });
+</script>
+</body>
+</html>

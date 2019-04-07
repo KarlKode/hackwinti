@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Simple Gantt</title>
+	<style>
+		body {
+			font-family: sans-serif;
+			background: #ccc;
+		}
+		.container {
+			width: 80%;
+			margin: 0 auto;
+		}
+		/* custom class */
+		.gantt .bar-milestone .bar {
+			fill: tomato;
+		}
+	</style>
+	<link rel="stylesheet" href="dist/frappe-gantt.css" />
+	<script src="dist/frappe-gantt.js"></script>
+	<script src="/assets/cytoscape-spread.js"></script>
+	<script src="/assets/cytoscape-dagre.js"></script>
+	<script src="//code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/cytoscape/3.5.2/cytoscape.min.js" charset="utf-8"></script>
+</head>
+<body>
+<div style="margin: 0 auto; width: 700px;">
+	<h1>Inspect the status of another order</h1>
+	<input type="text" id="order" value="Order ID">
+	<button id="get-order" value="">Load new state</button>
+</div>
+<p></p>
+	<div class="container">
+		<div class="gantt-target" style="height: 800px;"></div>
+	</div>
+	<script>
+		let orders = [
+			{
+				"order_id":"1263681",
+				"operation":"50",
+				"prev_operation":null,
+				"workcenter":"9714",
+				"prev_workcenter":null,
+				"start_time":"2017-07-04",
+				"end_time":"2017-07-04",
+				"setup_time":1800,
+				"processing_time":9000,
+				"plan_setup_time":1800,
+				"plan_processing_time":9000
+			},
+			{
+				"order_id":"1263681",
+				"operation":"110",
+				"prev_operation":50,
+				"workcenter":"9714",
+				"prev_workcenter":"9714",
+				"start_time":"2017-07-17",
+				"end_time":"2017-07-24",
+				"setup_time":1800,
+				"processing_time":18000,
+				"plan_setup_time":1800,
+				"plan_processing_time":18000
+			},{
+				"order_id": "1263681",
+				"operation": "115",
+				"prev_operation" :110,
+				"workcenter": "9714",
+				"prev_workcenter": "9714",
+				"start_time": "2017-07-24",
+				"end_time": "2017-07-24",
+				"setup_time": 3600,
+				"processing_time": 3600,
+				"plan_setup_time": 3600,
+				"plan_processing_time": 3600
+		}
+		]
+</script>
+
+	<script type="text/javascript" charset="utf-8">
+		let tasks = [];
+		let prev = null;
+		for (let i = 0; i < orders.length; i++) {
+			let o = orders[i];
+			let j = i;
+			let name = "Task-" + o.order_id;
+			tasks.push({
+				id: 'ord-' + o.order_id,
+				name: "Order " + o.order_id + " (Current workcenter: " + o.workcenter + ")",
+				start: o.start_time,
+				end: o.end_time,
+				progress: o.processing_time / o.setup_time,
+				dependencies: prev});
+			prev = name;
+		}
+		let gantt_chart = new Gantt(".gantt-target", tasks, {
+			on_click: function (task) {
+				console.log(task);
+			},
+			on_date_change: function(task, start, end) {
+				console.log(task, start, end);
+			},
+			on_progress_change: function(task, progress) {
+				console.log(task, progress);
+			},
+			on_view_change: function(mode) {
+				console.log(mode);
+			},
+			view_mode: 'Month',
+			language: 'en'
+		});
+		console.log(gantt_chart);
+
+		$('#get-order').click(function (e) {
+			let url = '/orders/' + $("#order").val() + '/history';
+			$.get(url, function (data) {
+				console.log("Got okay");
+				console.log(data);
+				console.log(gantt_chart);
+				let taskss = [];
+				$(data).each(function (d) {
+					taskss.push({
+						id: 'ord-' + d.order_id,
+						name: "Order " + d.order_id + " (Current workcenter: " + d.workcenter + ")",
+						start: d.start_time,
+						end: d.end_time,
+						progress: d.processing_time / d.setup_time,
+						dependencies: prev
+					});
+				});
+
+				gantt_chart.setup_tasks(taskss);
+
+				gantt_chart = new Gantt(".gantt-target", tasks, {
+					on_click: function (task) {
+						console.log(task);
+					},
+					on_date_change: function(task, start, end) {
+						console.log(task, start, end);
+					},
+					on_progress_change: function(task, progress) {
+						console.log(task, progress);
+					},
+					on_view_change: function(mode) {
+						console.log(mode);
+					},
+					view_mode: 'Month',
+					language: 'en'
+				});
+			});
+		});
+	</script>
+</body>
+</html>
